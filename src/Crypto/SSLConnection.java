@@ -7,28 +7,62 @@ package Crypto;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.IOException;
 import java.net.Socket;
 
 /**
  *
  * @author Raymond
  */
+
+enum CipherSuite {
+    RSA,
+    DH,
+    RC4,
+    RC2,
+    DES,
+    _3DES,
+    IDEA,
+    MD5,
+    SHA_1
+}
+
+class ClientHelloData implements java.io.Serializable {
+    public int nonce;
+    public CipherSuite[] cipher_suites;
+    // Compression Method
+    // Not needed
+}
+
+class ServerHelloData implements java.io.Serializable {
+    public int nonce;
+    public int sesh_id;
+    public CipherSuite cipher_suite;
+    // Compression Method
+    // Not needed
+}
+
 public class SSLConnection {
     
     private JEncrypDES cipher;
     private final Socket sock;
-    DataOutputStream out;
-    DataInputStream in;
+    private final DataOutputStream out;
+    private final DataInputStream in;
     private boolean handshake_complete;
     
-    public SSLConnection(Socket sock) {
+    public SSLConnection(Socket sock) throws IOException {
         this.sock = sock;
         handshake_complete = false;
+        out = new DataOutputStream(sock.getOutputStream());
+        in = new DataInputStream(sock.getInputStream());
     }
     
     public void client_handshake() {
         // ----Phase 1----
         // send client_hello
+        
+        //out.write();
+        
         // recv server_hello
         
         // ----Phase 2----
