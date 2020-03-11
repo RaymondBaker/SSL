@@ -18,27 +18,38 @@ import java.util.logging.Logger;
  * @author Raymond
  */
 
-enum CipherSuite {
+enum KeyExchange {
     RSA,
-    DH,
+    DH 
+}
+
+enum CipherAlgorithm {
     RC4,
     RC2,
     DES,
     _3DES,
-    IDEA,
+    IDEA
+}
+
+enum MACAlgorithm {
     MD5,
     SHA_1
 }
 
 class ClientHelloData implements java.io.Serializable {
     public int nonce;
-    public CipherSuite[] cipher_suites;
+    public KeyExchange[] key_exchange_algs;
+    public CipherAlgorithm[] cipher_algs;
+    public MACAlgorithm[] mac_algs;
     // Compression Method
     // Not needed
     
-    public ClientHelloData(CipherSuite[] cipher_suites) {
+    public ClientHelloData(KeyExchange[] key_exchange_algs, 
+            CipherAlgorithm[] cipher_algs,  MACAlgorithm[] mac_algs) {
         nonce = (int)(Math.random() * Integer.MAX_VALUE);
-        this.cipher_suites = cipher_suites;
+        this.key_exchange_algs = key_exchange_algs;
+        this.cipher_algs = cipher_algs;
+        this.mac_algs = mac_algs;
     }
 
 }
@@ -47,14 +58,19 @@ class ServerHelloData implements java.io.Serializable {
     public int nonce;
     public int sesh_id;
     public static int sesh_cnt = 0;
-    public CipherSuite cipher_suite;
+    public KeyExchange key_exchange_alg;
+    public CipherAlgorithm cipher_alg;
+    public MACAlgorithm mac_alg;
     // Compression Method
     // Not needed
     
-    public ServerHelloData (CipherSuite cipher_suite) {
+    public ServerHelloData (KeyExchange key_exchange_alg, 
+            CipherAlgorithm cipher_alg,  MACAlgorithm mac_alg) {
         nonce = (int)(Math.random() * Integer.MAX_VALUE);
         sesh_id = sesh_cnt++;
-        this.cipher_suite = cipher_suite;
+        this.key_exchange_alg = key_exchange_alg;
+        this.cipher_alg = cipher_alg;
+        this.mac_alg = mac_alg;
     }
 }
 
@@ -82,14 +98,18 @@ public class SSLConnection {
             // ----Phase 1----
             // send client_hello
             out.writeObject(new ClientHelloData(
-                new CipherSuite [] {CipherSuite.RSA}));
+                new KeyExchange[] {KeyExchange.RSA},
+                new CipherAlgorithm[] {CipherAlgorithm.DES},
+                new MACAlgorithm[] {MACAlgorithm.MD5}));
         
             // recv server_hello
             ServerHelloData resp = (ServerHelloData) in.readObject();
             
             // TODO: check nonce
             
-            CipherSuite cipher_suite = resp.cipher_suite;
+            KeyExchange key_exchange_alg = resp.key_exchange_alg;
+            CipherAlgorithm cipher_alg = resp.cipher_alg;
+            MACAlgorithm mac_alg = resp.mac_alg;
 
             // ----Phase 2----
             // recv cert
@@ -122,10 +142,13 @@ public class SSLConnection {
             
             // TODO: chose cipher suite
             // TODO: check nonce
-            CipherSuite cipher_suite = resp.cipher_suites[0];
+            KeyExchange key_exchange_alg = resp.key_exchange_algs[0];
+            CipherAlgorithm cipher_alg = resp.cipher_algs[0];
+            MACAlgorithm mac_alg = resp.mac_algs[0];
             
             // send server_hello
-            out.writeObject(new ServerHelloData(cipher_suite));
+            out.writeObject(new ServerHelloData(
+                    key_exchange_alg, cipher_alg, mac_alg));
             
             
             // ----Phase 2----
