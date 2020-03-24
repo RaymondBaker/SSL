@@ -309,10 +309,14 @@ public class SSLConnection {
             byte[] data = bos.toByteArray();
             byte[] encrypted = sesh_cipher.encrypt(data);
             out.writeObject(encrypted);
+
         } catch (InvalidKeyException | IllegalBlockSizeException | BadPaddingException ex) {
             Logger.getLogger(SSLConnection.class.getName()).log(Level.SEVERE, null, ex);
         } finally {
             bos.close();
+            if (obj_out != null) {
+                obj_out.close();
+            }
         }
     }
 
@@ -326,11 +330,11 @@ public class SSLConnection {
             byte[] decrypted = sesh_cipher.decrypt(data);
 
             ByteArrayInputStream bis = new ByteArrayInputStream(decrypted);
-            ObjectInput obj_in = null;
+            ObjectInput obj_in = new ObjectInputStream(bis);
 
-            obj_in = new ObjectInputStream(bis);
             Object obj = obj_in.readObject();
             obj_in.close();
+            bis.close();
 
             return obj;
 
