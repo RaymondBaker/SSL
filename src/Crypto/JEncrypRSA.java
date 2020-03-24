@@ -57,7 +57,7 @@ public class JEncrypRSA {
         /* Generate private key. */
         PKCS8EncodedKeySpec ks = new PKCS8EncodedKeySpec(bytes);
         KeyFactory kf;
-        kf = KeyFactory.getInstance("RSA/ECB/PKCS1Padding");
+        kf = KeyFactory.getInstance("RSA");
         priv_key = kf.generatePrivate(ks);
 
         /* Read all the public key bytes */
@@ -66,7 +66,6 @@ public class JEncrypRSA {
 
         /* Generate public key. */
         X509EncodedKeySpec ks_ = new X509EncodedKeySpec(bytes);
-        kf = KeyFactory.getInstance("RSA/ECB/PKCS1Padding");
         my_pub_key = kf.generatePublic(ks_);
 
         cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");

@@ -17,14 +17,14 @@ import java.security.NoSuchAlgorithmException;
  *
  * @author Raymond
  */
-public class Setup_Main {
+public class SetupMain {
 
     /**
      * @param args the command line arguments
      */
     public static void main(String[] args) throws NoSuchAlgorithmException, IOException {
         //Save CA key for both programs to use
-        KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA/ECB/PKCS1Padding");
+        KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
         kpg.initialize(3072);
         KeyPair kp = kpg.generateKeyPair();
 
@@ -35,10 +35,16 @@ public class Setup_Main {
         FileOutputStream out = new FileOutputStream(outFile + ".key");
         out.write(pvt.getEncoded());
         out.close();
+        System.out.println("Successfully Created: " + outFile + ".key");
 
         out = new FileOutputStream(outFile + ".pub");
         out.write(pub.getEncoded());
         out.close();
+        System.out.println("Successfully Created: " + outFile + ".pub");
+
+        System.out.println("Private key format: " + pvt.getFormat());
+        System.out.println("Public key format: " + pub.getFormat());
+
     }
 
 }

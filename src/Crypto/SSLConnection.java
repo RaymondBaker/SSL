@@ -108,7 +108,7 @@ public class SSLConnection {
         CA_cipher = new JEncrypRSA("CA_Key");
     }
 
-    public void client_handshake() throws IOException {
+    public boolean client_handshake() throws IOException {
         try {
             // ----Phase 1----
             // send client_hello
@@ -140,7 +140,7 @@ public class SSLConnection {
             // send cert
             if (cert_req == 1) {
                 System.err.println("Not Implemented");
-                return;
+                return false;
             }
             // send client_key_exchange
             sesh_cipher = new JEncrypDES();
@@ -150,7 +150,7 @@ public class SSLConnection {
             // send cert_verify
             if (cert_req == 1) {
                 System.err.println("Not Implemented");
-                return;
+                return false;
             }
             // ----Phase 4----
             // send change_cipher_spec
@@ -161,15 +161,17 @@ public class SSLConnection {
             in.readInt();
             // recv finished
             in.readInt();
-            
+
             handshake_complete = true;
+            return true;
         } catch (ClassNotFoundException | NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException
                 | InvalidKeySpecException | IllegalBlockSizeException | BadPaddingException ex) {
             Logger.getLogger(SSLConnection.class.getName()).log(Level.SEVERE, null, ex);
+            return false;
         }
     }
 
-    public void server_handshake() throws IOException, IllegalBlockSizeException, BadPaddingException,
+    public boolean server_handshake() throws IOException, IllegalBlockSizeException, BadPaddingException,
             NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, InvalidKeySpecException {
         try {
             // ----Phase 1----
@@ -236,8 +238,10 @@ public class SSLConnection {
             // send finished
             out.writeInt(1);
             handshake_complete = true;
+            return true;
         } catch (ClassNotFoundException ex) {
             Logger.getLogger(SSLConnection.class.getName()).log(Level.SEVERE, null, ex);
+            return false;
         }
     }
 
