@@ -135,11 +135,11 @@ public class SSLConnection {
             System.out.println("\tRecieved Server Public Key");
 
             // recv cert_request
-            int cert_req = in.readInt();
+            int cert_req = (int) in.readObject();
             System.out.println("\tRecieved Certificate Request: " + cert_req);
 
             // recv server_hello_done
-            in.readInt();
+            in.readObject();
             System.out.println("\tRecieved Server Hello Done");
 
             // ----Phase 3----
@@ -149,6 +149,7 @@ public class SSLConnection {
                 return false;
             }
             // send client_key_exchange
+            // TODO: check if DES is actually chosen
             sesh_cipher = new JEncrypDES();
 
             out.writeObject(server_pub.encrypt(sesh_cipher.get_encrypt_key().getEncoded()));
@@ -160,13 +161,13 @@ public class SSLConnection {
             }
             // ----Phase 4----
             // send change_cipher_spec
-            out.writeInt(0);
+            out.writeObject(0);
             // send finished
-            out.writeInt(1);
+            out.writeObject(1);
             // recv change_cipher_spec
-            in.readInt();
+            in.readObject();
             // recv finished
-            in.readInt();
+            in.readObject();
 
             handshake_complete = true;
             return true;
@@ -211,11 +212,11 @@ public class SSLConnection {
 
                     // send cert_request
                     // 0 representing false. Server doesn't want a client cert
-                    out.writeInt(0);
+                    out.writeObject(0);
                     System.out.println("\tSent Certificate Request: 0");
 
                     // send server_hello_done
-                    out.writeInt(1);
+                    out.writeObject(1);
                     System.out.println("\tSent Server Hello Done");
 
                     // ----Phase 3----
@@ -241,13 +242,13 @@ public class SSLConnection {
 
             // ----Phase 4----
             // recv change_cipher_spec
-            in.readInt();
+            in.readObject();
             // recv finished
-            in.readInt();
+            in.readObject();
             // send change_cipher_spec
-            out.writeInt(0);
+            out.writeObject(0);
             // send finished
-            out.writeInt(1);
+            out.writeObject(1);
             handshake_complete = true;
             return true;
         } catch (ClassNotFoundException ex) {
@@ -256,15 +257,18 @@ public class SSLConnection {
         }
     }
 
-    public void send() throws Exception {
+    public void send(java.io.Serializable data) throws IOException {
         if (!handshake_complete) {
-            throw new Exception("Handshake Not Complete");
+            throw new IOException("Handshake Not Complete");
         }
+        
+        out.writeObject(data);
     }
 
-    public void recv() throws Exception {
+    public Object recv() throws IOException, ClassNotFoundException {
         if (!handshake_complete) {
-            throw new Exception("Handshake Not Complete");
+            throw new IOException("Handshake Not Complete");
         }
+        return in.readObject();
     }
 }

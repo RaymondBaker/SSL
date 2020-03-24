@@ -36,8 +36,11 @@ public class ClientMain {
                 System.err.println("Failed!");
                 return;
             }
+            
+            String recv = (String)ssl_con.recv();
+            System.out.println(recv);
 
-        } catch (IOException | NoSuchAlgorithmException | InvalidKeySpecException | NoSuchPaddingException ex) {
+        } catch (IOException | NoSuchAlgorithmException | InvalidKeySpecException | NoSuchPaddingException | ClassNotFoundException ex) {
             Logger.getLogger(ClientMain.class.getName()).log(Level.SEVERE, null, ex);
         }
     }

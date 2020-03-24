@@ -46,10 +46,14 @@ public class ServerMain {
                 System.err.println("Failed!");
                 return;
             }
+            
+            ssl_con.send("Test");
 
         } catch (IOException | NoSuchAlgorithmException | InvalidKeySpecException | NoSuchPaddingException |
                 IllegalBlockSizeException | BadPaddingException | InvalidKeyException ex) {
             Logger.getLogger(ClientMain.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (Exception ex) {
+            Logger.getLogger(ServerMain.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 }
