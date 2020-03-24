@@ -5,7 +5,6 @@
  */
 package Crypto;
 
-
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -26,15 +25,15 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.KeyGenerator;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 
 /**
  *
  * @author Raymond
  */
-
 enum KeyExchange {
     RSA,
-    DH 
+    DH
 }
 
 enum CipherAlgorithm {
@@ -51,16 +50,17 @@ enum MACAlgorithm {
 }
 
 class ClientHelloData implements java.io.Serializable {
+
     public int nonce;
     public KeyExchange[] key_exchange_algs;
     public CipherAlgorithm[] cipher_algs;
     public MACAlgorithm[] mac_algs;
     // Compression Method
     // Not needed
-    
-    public ClientHelloData(KeyExchange[] key_exchange_algs, 
-            CipherAlgorithm[] cipher_algs,  MACAlgorithm[] mac_algs) {
-        nonce = (int)(Math.random() * Integer.MAX_VALUE);
+
+    public ClientHelloData(KeyExchange[] key_exchange_algs,
+            CipherAlgorithm[] cipher_algs, MACAlgorithm[] mac_algs) {
+        nonce = (int) (Math.random() * Integer.MAX_VALUE);
         this.key_exchange_algs = key_exchange_algs;
         this.cipher_algs = cipher_algs;
         this.mac_algs = mac_algs;
@@ -69,6 +69,7 @@ class ClientHelloData implements java.io.Serializable {
 }
 
 class ServerHelloData implements java.io.Serializable {
+
     public int nonce;
     public int sesh_id;
     public static transient int sesh_cnt = 0;
@@ -77,10 +78,10 @@ class ServerHelloData implements java.io.Serializable {
     public MACAlgorithm mac_alg;
     // Compression Method
     // Not needed
-    
-    public ServerHelloData (KeyExchange key_exchange_alg, 
-            CipherAlgorithm cipher_alg,  MACAlgorithm mac_alg) {
-        nonce = (int)(Math.random() * Integer.MAX_VALUE);
+
+    public ServerHelloData(KeyExchange key_exchange_alg,
+            CipherAlgorithm cipher_alg, MACAlgorithm mac_alg) {
+        nonce = (int) (Math.random() * Integer.MAX_VALUE);
         sesh_id = sesh_cnt++;
         this.key_exchange_alg = key_exchange_alg;
         this.cipher_alg = cipher_alg;
@@ -88,176 +89,167 @@ class ServerHelloData implements java.io.Serializable {
     }
 }
 
-class Certificate implements java.io.Serializable {
-    public PublicKey pub_key;
-    public byte[] cert;
-    
-    public Certificate (PublicKey pub_key, byte[] cert) {
-       this.pub_key = pub_key;
-       this.cert = cert;
-    }
-}
-
 public class SSLConnection {
-    
-    private JEncrypDES cipher;
+
+    private JEncrypDES sesh_cipher;
     private final Socket sock;
     private final ObjectOutputStream out;
     private final ObjectInputStream in;
     private boolean handshake_complete;
-    
+
     private final JEncrypRSA CA_cipher;
-    
+
     public SSLConnection(Socket sock) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, NoSuchPaddingException {
         this.sock = sock;
         handshake_complete = false;
         out = new ObjectOutputStream(sock.getOutputStream());
         in = new ObjectInputStream(sock.getInputStream());
-        
+
         CA_cipher = new JEncrypRSA("CA_Key");
     }
-    
+
     public void client_handshake() throws IOException {
         try {
             // ----Phase 1----
             // send client_hello
             out.writeObject(new ClientHelloData(
-                new KeyExchange[] {KeyExchange.RSA},
-                new CipherAlgorithm[] {CipherAlgorithm.DES},
-                new MACAlgorithm[] {MACAlgorithm.MD5}));
-        
+                    new KeyExchange[]{KeyExchange.RSA},
+                    new CipherAlgorithm[]{CipherAlgorithm.DES},
+                    new MACAlgorithm[]{MACAlgorithm.MD5}));
+
             // recv server_hello
             ServerHelloData resp = (ServerHelloData) in.readObject();
-            
+
             // TODO: check nonce
-            
             KeyExchange key_exchange_alg = resp.key_exchange_alg;
             CipherAlgorithm cipher_alg = resp.cipher_alg;
             MACAlgorithm mac_alg = resp.mac_alg;
 
             // ----Phase 2----
             // recv cert
+            byte[] cert = (byte[]) in.readObject();
+
+            JEncrypRSA server_pub = new JEncrypRSA(CA_cipher.decrypt(cert), 2048);
+
             // recv cert_request
+            int cert_req = in.readInt();
             // recv server_hello_done
+            in.readInt();
 
             // ----Phase 3----
             // send cert
+            if (cert_req == 1) {
+                System.err.println("Not Implemented");
+                return;
+            }
             // send client_key_exchange
-            // send cert_verify
+            sesh_cipher = new JEncrypDES();
 
+            out.writeObject(sesh_cipher.get_encrypt_key());
+
+            // send cert_verify
+            if (cert_req == 1) {
+                System.err.println("Not Implemented");
+                return;
+            }
             // ----Phase 4----
             // send change_cipher_spec
+            out.writeInt(0);
             // send finished
+            out.writeInt(1);
             // recv change_cipher_spec
+            in.readInt();
             // recv finished
-
+            in.readInt();
+            
             handshake_complete = true;
-        } catch (ClassNotFoundException ex) {
+        } catch (ClassNotFoundException | NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException
+                | InvalidKeySpecException | IllegalBlockSizeException | BadPaddingException ex) {
             Logger.getLogger(SSLConnection.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
-    
-    public void server_handshake() throws IOException, IllegalBlockSizeException, BadPaddingException {
+
+    public void server_handshake() throws IOException, IllegalBlockSizeException, BadPaddingException,
+            NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, InvalidKeySpecException {
         try {
             // ----Phase 1----
             // recv client_hello
-            
+
             ClientHelloData resp = (ClientHelloData) in.readObject();
-            
+
             // TODO: chose cipher suite
             // TODO: check nonce
             KeyExchange key_exchange_alg = resp.key_exchange_algs[0];
             CipherAlgorithm cipher_alg = resp.cipher_algs[0];
             MACAlgorithm mac_alg = resp.mac_algs[0];
-            
+
             // send server_hello
             out.writeObject(new ServerHelloData(
                     key_exchange_alg, cipher_alg, mac_alg));
-            
-            
+
             // ----Phase 2----
             // send cert
             JEncrypRSA rsa_transfer_cipher;
-            
-            try {
-                switch(key_exchange_alg) {
-                    case RSA:
-                    {
-                        rsa_transfer_cipher = new JEncrypRSA(3072);
-                        
-                        PublicKey my_pubkey = rsa_transfer_cipher.get_my_pub_key();
-                        
-                        Certificate cert = new Certificate(my_pubkey, CA_cipher.encrypt(my_pubkey.getEncoded()));
-                        
-                        out.writeObject(cert);
 
-                        break;
-                    }
-                    case DH:
-                    {
-                       // Someone elses problem
-                        break;
-                    }
+            switch (key_exchange_alg) {
+                case RSA: {
+                    rsa_transfer_cipher = new JEncrypRSA(3072);
+                    PublicKey my_pubkey = rsa_transfer_cipher.get_my_pub_key();
+
+                    out.writeObject(CA_cipher.encrypt(my_pubkey.getEncoded()));
+
+                    // send cert_request
+                    // 0 representing false. Server doesn't want a client cert
+                    out.writeInt(0);
+
+                    // send server_hello_done
+                    out.writeInt(1);
+
+                    // ----Phase 3----
+                    // recv cert
+                    // Don't do anything because we didn't request a cert
+                    // recv client_key_exchange
+                    // recv cert_verify
+                    // Don't do anything because we didn't request a cert
+                    byte[] recv_data = (byte[]) in.readObject();
+                    byte[] key_data = rsa_transfer_cipher.decrypt(recv_data);
+
+                    SecretKey sesh_key = new SecretKeySpec(key_data, 0, key_data.length, "DES");
+
+                    sesh_cipher = new JEncrypDES(sesh_key);
+
+                    break;
                 }
-            } catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | InvalidKeySpecException ex) {
-                Logger.getLogger(SSLConnection.class.getName()).log(Level.SEVERE, null, ex);
+                case DH: {
+                    // Someone elses problem
+                    break;
+                }
             }
 
-            // send cert_request
-            // 0 representing false. Server doesn't want a client cert
-            out.write(0);
-            
-            // send server_hello_done
-            out.write(1);
-            
-            
-            // ----Phase 3----
-            // recv cert
-            
-            // Don't do anything because we didn't request a cert
-            
-            // recv client_key_exchange
-            
-            SecretKey sesh_key;
-            
-            switch(key_exchange_alg) {
-                    case RSA:
-                    {
-                        byte[] recv_data = (byte[]) in.readObject();
-
-                        break;
-                    }
-                    case DH:
-                    {
-                       // Someone elses problem
-                    }
-                }
-            
-            
-            
-            
-            // recv cert_verify
-            // Don't do anything because we didn't request a cert
-            
             // ----Phase 4----
             // recv change_cipher_spec
+            in.readInt();
             // recv finished
+            in.readInt();
             // send change_cipher_spec
+            out.writeInt(0);
             // send finished
-
+            out.writeInt(1);
             handshake_complete = true;
         } catch (ClassNotFoundException ex) {
             Logger.getLogger(SSLConnection.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
-    
+
     public void send() throws Exception {
-        if (!handshake_complete)
+        if (!handshake_complete) {
             throw new Exception("Handshake Not Complete");
+        }
     }
-    
+
     public void recv() throws Exception {
-        if (!handshake_complete)
+        if (!handshake_complete) {
             throw new Exception("Handshake Not Complete");
+        }
     }
 }
