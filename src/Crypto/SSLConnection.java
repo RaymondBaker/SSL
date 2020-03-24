@@ -5,7 +5,10 @@
  */
 package Crypto;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.ObjectInput;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
@@ -286,6 +289,51 @@ public class SSLConnection {
         byte[] data = (byte[]) in.readObject();
         try {
             return sesh_cipher.decrypt(data);
+        } catch (InvalidKeyException | IllegalBlockSizeException | BadPaddingException ex) {
+            Logger.getLogger(SSLConnection.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return null;
+    }
+
+    public void sendObject(java.io.Serializable obj) throws IOException {
+        if (!handshake_complete) {
+            throw new IOException("Handshake Not Complete");
+        }
+
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        ObjectOutputStream obj_out = null;
+        try {
+            obj_out = new ObjectOutputStream(bos);
+            obj_out.writeObject(obj);
+            obj_out.flush();
+            byte[] data = bos.toByteArray();
+            byte[] encrypted = sesh_cipher.encrypt(data);
+            out.writeObject(encrypted);
+        } catch (InvalidKeyException | IllegalBlockSizeException | BadPaddingException ex) {
+            Logger.getLogger(SSLConnection.class.getName()).log(Level.SEVERE, null, ex);
+        } finally {
+            bos.close();
+        }
+    }
+
+    public Object recvObject() throws IOException, ClassNotFoundException {
+        if (!handshake_complete) {
+            throw new IOException("Handshake Not Complete");
+        }
+
+        try {
+            byte[] data = (byte[]) in.readObject();
+            byte[] decrypted = sesh_cipher.decrypt(data);
+
+            ByteArrayInputStream bis = new ByteArrayInputStream(decrypted);
+            ObjectInput obj_in = null;
+
+            obj_in = new ObjectInputStream(bis);
+            Object obj = obj_in.readObject();
+            obj_in.close();
+
+            return obj;
+
         } catch (InvalidKeyException | IllegalBlockSizeException | BadPaddingException ex) {
             Logger.getLogger(SSLConnection.class.getName()).log(Level.SEVERE, null, ex);
         }

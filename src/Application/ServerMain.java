@@ -47,7 +47,7 @@ public class ServerMain {
                 return;
             }
             
-            ssl_con.send("Test".getBytes());
+            ssl_con.sendObject("Test");
         } catch (IOException | NoSuchAlgorithmException | InvalidKeySpecException | NoSuchPaddingException ex) {
             Logger.getLogger(ServerMain.class.getName()).log(Level.SEVERE, null, ex);
         }

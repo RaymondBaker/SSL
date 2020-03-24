@@ -37,8 +37,8 @@ public class ClientMain {
                 return;
             }
             
-            byte [] recv = ssl_con.recv();
-            System.out.println(new String(recv));
+            String recv = (String) ssl_con.recvObject();
+            System.out.println(recv);
 
         } catch (IOException | NoSuchAlgorithmException | InvalidKeySpecException | NoSuchPaddingException | ClassNotFoundException ex) {
             Logger.getLogger(ClientMain.class.getName()).log(Level.SEVERE, null, ex);
