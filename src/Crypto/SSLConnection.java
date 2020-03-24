@@ -116,9 +116,11 @@ public class SSLConnection {
                     new KeyExchange[]{KeyExchange.RSA},
                     new CipherAlgorithm[]{CipherAlgorithm.DES},
                     new MACAlgorithm[]{MACAlgorithm.MD5}));
+            System.out.println("\tSent Client Hello");
 
             // recv server_hello
             ServerHelloData resp = (ServerHelloData) in.readObject();
+            System.out.println("\tRecieved Server Hello");
 
             // TODO: check nonce
             KeyExchange key_exchange_alg = resp.key_exchange_alg;
@@ -129,12 +131,16 @@ public class SSLConnection {
             // recv cert
             byte[] cert = (byte[]) in.readObject();
 
-            JEncrypRSA server_pub = new JEncrypRSA(CA_cipher.decrypt(cert), 2048);
+            JEncrypRSA server_pub = new JEncrypRSA(CA_cipher.unsign(cert), 1024);
+            System.out.println("\tRecieved Server Public Key");
 
             // recv cert_request
             int cert_req = in.readInt();
+            System.out.println("\tRecieved Certificate Request: " + cert_req);
+
             // recv server_hello_done
             in.readInt();
+            System.out.println("\tRecieved Server Hello Done");
 
             // ----Phase 3----
             // send cert
@@ -145,7 +151,7 @@ public class SSLConnection {
             // send client_key_exchange
             sesh_cipher = new JEncrypDES();
 
-            out.writeObject(sesh_cipher.get_encrypt_key());
+            out.writeObject(server_pub.encrypt(sesh_cipher.get_encrypt_key().getEncoded()));
 
             // send cert_verify
             if (cert_req == 1) {
@@ -178,6 +184,7 @@ public class SSLConnection {
             // recv client_hello
 
             ClientHelloData resp = (ClientHelloData) in.readObject();
+            System.out.println("\tReceived Client Hello");
 
             // TODO: chose cipher suite
             // TODO: check nonce
@@ -188,6 +195,7 @@ public class SSLConnection {
             // send server_hello
             out.writeObject(new ServerHelloData(
                     key_exchange_alg, cipher_alg, mac_alg));
+            System.out.println("\tSent Server Hello");
 
             // ----Phase 2----
             // send cert
@@ -195,17 +203,20 @@ public class SSLConnection {
 
             switch (key_exchange_alg) {
                 case RSA: {
-                    rsa_transfer_cipher = new JEncrypRSA(3072);
+                    rsa_transfer_cipher = new JEncrypRSA(1024);
                     PublicKey my_pubkey = rsa_transfer_cipher.get_my_pub_key();
 
-                    out.writeObject(CA_cipher.encrypt(my_pubkey.getEncoded()));
+                    out.writeObject(CA_cipher.sign(my_pubkey.getEncoded()));
+                    System.out.println("\tSent Server Public Key");
 
                     // send cert_request
                     // 0 representing false. Server doesn't want a client cert
                     out.writeInt(0);
+                    System.out.println("\tSent Certificate Request: 0");
 
                     // send server_hello_done
                     out.writeInt(1);
+                    System.out.println("\tSent Server Hello Done");
 
                     // ----Phase 3----
                     // recv cert

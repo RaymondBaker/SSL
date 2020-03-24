@@ -92,31 +92,18 @@ public class JEncrypRSA {
         return cipher.doFinal(data[data.length - 1]);
     }
 
-    public byte[] sign_and_encrypt(SecretKey key) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
-        cipher.init(Cipher.WRAP_MODE, priv_key);
-        byte[] signed = cipher.wrap(key);
-
-        cipher.init(Cipher.ENCRYPT_MODE, their_pub_key);
-        System.out.println("Signed length: " + signed.length);
-
-        return cipher.doFinal(signed);
-    }
-
-    public SecretKey decrypt_and_unsign(byte[] data) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
-        cipher.init(Cipher.DECRYPT_MODE, priv_key);
-        byte[] decoded = cipher.doFinal(data);
-
-        cipher.init(Cipher.UNWRAP_MODE, their_pub_key);
-        try {
-            return (SecretKey) cipher.unwrap(decoded, "DES", Cipher.SECRET_KEY);
-        } catch (NoSuchAlgorithmException ex) {
-            Logger.getLogger(JEncrypRSA.class.getName()).log(Level.SEVERE, null, ex);
-            return null;
-        }
-    }
-
     public byte[] encrypt(byte[] data) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
         cipher.init(Cipher.ENCRYPT_MODE, their_pub_key);
+        return cipher.doFinal(data);
+    }
+
+    public byte[] sign(byte[] data) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
+        cipher.init(Cipher.ENCRYPT_MODE, priv_key);
+        return cipher.doFinal(data);
+    }
+    
+    public byte[] unsign(byte[] data) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
+        cipher.init(Cipher.DECRYPT_MODE, my_pub_key);
         return cipher.doFinal(data);
     }
 
