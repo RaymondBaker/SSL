@@ -21,6 +21,8 @@ import java.security.Signature;
 import java.security.spec.InvalidKeySpecException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.KeyGenerator;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
@@ -86,6 +88,16 @@ class ServerHelloData implements java.io.Serializable {
     }
 }
 
+class Certificate implements java.io.Serializable {
+    public PublicKey pub_key;
+    public byte[] cert;
+    
+    public Certificate (PublicKey pub_key, byte[] cert) {
+       this.pub_key = pub_key;
+       this.cert = cert;
+    }
+}
+
 public class SSLConnection {
     
     private JEncrypDES cipher;
@@ -94,15 +106,15 @@ public class SSLConnection {
     private final ObjectInputStream in;
     private boolean handshake_complete;
     
-    private static final JEncrypRSA CA_sign;
+    private final JEncrypRSA CA_cipher;
     
-    public SSLConnection(Socket sock) throws IOException {
+    public SSLConnection(Socket sock) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, NoSuchPaddingException {
         this.sock = sock;
         handshake_complete = false;
         out = new ObjectOutputStream(sock.getOutputStream());
         in = new ObjectInputStream(sock.getInputStream());
         
-        CA_sign = new JEncrypRSA()
+        CA_cipher = new JEncrypRSA("CA_Key");
     }
     
     public void client_handshake() throws IOException {
@@ -145,7 +157,7 @@ public class SSLConnection {
         }
     }
     
-    public void server_handshake() throws IOException {
+    public void server_handshake() throws IOException, IllegalBlockSizeException, BadPaddingException {
         try {
             // ----Phase 1----
             // recv client_hello
@@ -173,7 +185,11 @@ public class SSLConnection {
                     {
                         rsa_transfer_cipher = new JEncrypRSA(3072);
                         
-                        out.write(rsa_transfer_cipher.get_my_pub_key().getEncoded());
+                        PublicKey my_pubkey = rsa_transfer_cipher.get_my_pub_key();
+                        
+                        Certificate cert = new Certificate(my_pubkey, CA_cipher.encrypt(my_pubkey.getEncoded()));
+                        
+                        out.writeObject(cert);
 
                         break;
                     }
