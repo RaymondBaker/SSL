@@ -178,8 +178,7 @@ public class SSLConnection {
         }
     }
 
-    public boolean server_handshake() throws IOException, IllegalBlockSizeException, BadPaddingException,
-            NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, InvalidKeySpecException {
+    public boolean server_handshake() throws IOException {
         try {
             // ----Phase 1----
             // recv client_hello
@@ -251,24 +250,36 @@ public class SSLConnection {
             out.writeObject(1);
             handshake_complete = true;
             return true;
-        } catch (ClassNotFoundException ex) {
+        } catch (ClassNotFoundException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException 
+                | NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeySpecException ex) {
             Logger.getLogger(SSLConnection.class.getName()).log(Level.SEVERE, null, ex);
             return false;
         }
     }
 
-    public void send(java.io.Serializable data) throws IOException {
+    public void send(byte [] data) throws IOException {
         if (!handshake_complete) {
             throw new IOException("Handshake Not Complete");
         }
         
-        out.writeObject(data);
+        try {
+            byte [] encrypted = sesh_cipher.encrypt(data);
+            out.writeObject(encrypted);
+        } catch (InvalidKeyException | IllegalBlockSizeException | BadPaddingException ex) {
+            Logger.getLogger(SSLConnection.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
-    public Object recv() throws IOException, ClassNotFoundException {
+    public byte[] recv() throws IOException, ClassNotFoundException {
         if (!handshake_complete) {
             throw new IOException("Handshake Not Complete");
         }
-        return in.readObject();
+        byte [] data =  (byte []) in.readObject();
+        try {
+            return sesh_cipher.decrypt(data);
+        } catch (InvalidKeyException | IllegalBlockSizeException | BadPaddingException ex) {
+            Logger.getLogger(SSLConnection.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return null;
     }
 }
