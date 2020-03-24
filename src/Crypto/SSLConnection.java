@@ -162,12 +162,16 @@ public class SSLConnection {
             // ----Phase 4----
             // send change_cipher_spec
             out.writeObject(0);
+            System.out.println("\tSent Change Cipher Spec");
             // send finished
             out.writeObject(1);
+            System.out.println("\tSent Finnished");
             // recv change_cipher_spec
             in.readObject();
+            System.out.println("\tReceived Change Cipher Spec");
             // recv finished
             in.readObject();
+            System.out.println("\tReceived Finnished");
 
             handshake_complete = true;
             return true;
@@ -242,28 +246,33 @@ public class SSLConnection {
             // ----Phase 4----
             // recv change_cipher_spec
             in.readObject();
+            System.out.println("\tReceived Change Cipher Spec");
             // recv finished
             in.readObject();
+            System.out.println("\tReceived Finished");
             // send change_cipher_spec
             out.writeObject(0);
+            System.out.println("\tSent Change Cipher Spec");
             // send finished
             out.writeObject(1);
+            System.out.println("\tSent Finnished");
+
             handshake_complete = true;
             return true;
-        } catch (ClassNotFoundException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException 
+        } catch (ClassNotFoundException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException
                 | NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeySpecException ex) {
             Logger.getLogger(SSLConnection.class.getName()).log(Level.SEVERE, null, ex);
             return false;
         }
     }
 
-    public void send(byte [] data) throws IOException {
+    public void send(byte[] data) throws IOException {
         if (!handshake_complete) {
             throw new IOException("Handshake Not Complete");
         }
-        
+
         try {
-            byte [] encrypted = sesh_cipher.encrypt(data);
+            byte[] encrypted = sesh_cipher.encrypt(data);
             out.writeObject(encrypted);
         } catch (InvalidKeyException | IllegalBlockSizeException | BadPaddingException ex) {
             Logger.getLogger(SSLConnection.class.getName()).log(Level.SEVERE, null, ex);
@@ -274,7 +283,7 @@ public class SSLConnection {
         if (!handshake_complete) {
             throw new IOException("Handshake Not Complete");
         }
-        byte [] data =  (byte []) in.readObject();
+        byte[] data = (byte[]) in.readObject();
         try {
             return sesh_cipher.decrypt(data);
         } catch (InvalidKeyException | IllegalBlockSizeException | BadPaddingException ex) {
