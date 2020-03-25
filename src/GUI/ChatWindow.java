@@ -1,9 +1,19 @@
 package GUI;
 
+import Application.ClientMain;
+import Application.ServerMain;
+import Crypto.SSLConnection;
 import java.io.File;
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.security.NoSuchAlgorithmException;
+import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javafx.application.Application;
 import javafx.scene.Scene;
@@ -17,6 +27,7 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javax.crypto.NoSuchPaddingException;
 
 public class ChatWindow extends Application {
 
@@ -39,8 +50,11 @@ public class ChatWindow extends Application {
     private List<Label> messages;
     private ScrollPane scrollP;
 
+    private SSLConnection ssl_conn;
+
     private int messageCount;
 
+    @Override
     public void init() {
         Application.Parameters p = this.getParameters();
         //Map<String, String> namedParams = p.getNamed();
@@ -49,6 +63,45 @@ public class ChatWindow extends Application {
         //String paramStr = "Named Parameters: " + namedParams + "\n" +
         //"Unnamed Parameters: " + unnamedParams + "\n" +
         //"Raw Parameters: " + rawParams;
+
+        if (id.equals("[Client]")) {
+            cms = "Server";
+            try {
+                Socket sock = new Socket("localhost", 6666);
+
+                SSLConnection ssl_con = new SSLConnection(sock);
+
+                System.out.println("Establishing Secure Connection");
+                if (ssl_con.client_handshake()) {
+                    System.out.println("Done");
+                } else {
+                    System.err.println("Failed!");
+                }
+            } catch (IOException | NoSuchAlgorithmException | InvalidKeySpecException | NoSuchPaddingException ex) {
+                Logger.getLogger(ChatWindow.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        } else {
+            cms = "Client";
+            try {
+                int port = 6666;
+                ServerSocket listen_soc = new ServerSocket(port);
+
+                System.out.println("Listening on port: " + port);
+                Socket sock = listen_soc.accept();
+                System.out.println("Received connection");
+
+                SSLConnection ssl_con = new SSLConnection(sock);
+
+                System.out.println("Establishing Secure Connection");
+                if (ssl_con.server_handshake()) {
+                    System.out.println("Done");
+                } else {
+                    System.err.println("Failed!");
+                }
+            } catch (IOException | NoSuchAlgorithmException | InvalidKeySpecException | NoSuchPaddingException ex) {
+                Logger.getLogger(ChatWindow.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
 
         //System.out.println(paramStr);
     }
@@ -96,12 +149,6 @@ public class ChatWindow extends Application {
 
         root.getStylesheets().add(getClass().getResource("Style.css").toExternalForm());
 
-        if (id.equals("Client")) {
-            cms = "Server";
-        } else {
-            cms = "Client";
-        }
-
         connectionMessage = new Label(("You are connected to: ".concat(cms)).concat("!"));
         connectionMessage.getStyleClass().add("connectionmessage");
 
@@ -141,10 +188,6 @@ public class ChatWindow extends Application {
 
     public String getTextBoxContent() {
         return lastMessageSent;
-    }
-
-    public static void main(String[] args) {
-
     }
 
 }

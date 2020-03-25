@@ -8,7 +8,7 @@ import javafx.application.Application;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 
-public class TestGUI {
+public class ServerGUI {
     
     
 
@@ -18,15 +18,8 @@ public class TestGUI {
         //ChatWindow test = new ChatWindow("Client");
        
         System.out.println("Reached Here!");
-        Application.launch(ChatWindow.class, "Client" );
-        //Application.launch(ChatWindow.class, "Server" );
-
-        //Application.launch(ChatWindow.class, "Client");
-        
-    
-        
-        
-        
+        Application.launch(ChatWindow.class, "Server" );
+        //Application.launch(ChatWindow.class, "Server" );     
         
     }
     
