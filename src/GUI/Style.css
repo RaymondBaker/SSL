@@ -1,0 +1,57 @@
+/*
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+*/
+/* 
+    Created on : 24-Mar-2020, 2:38:59 PM
+    Author     : Meher
+*/
+
+.chatbox{
+
+    -fx-background-color:#3e4444;
+    -fx-min-height:500px;
+    -fx-min-width:500px; 
+
+
+}
+
+
+.label{
+
+
+    -fx-background-color:#2a6592;
+    -fx-text-fill:white;
+    -fx-min-height:30px;
+    -fx-max-height:5100px;
+    -fx-max-width: 200px;
+    -fx-border-radius: 10 10 10 10;
+    -fx-background-radius: 10 10 10 10;
+    -fx-padding: 5 5 5 5;
+    -fx-alignment: center;
+    -fx-wrap-text: true;
+
+
+}
+
+.button{
+
+    -fx-background-color:#405d27;
+    -fx-text-fill:white;
+
+}
+
+.button:hover{
+    -fx-background-color:#82b74b;
+}
+
+.connectionmessage{
+    -fx-translate-x: 30;
+    -fx-font-weight: bold;
+}
+
+
+.bottom{
+     -fx-background-color: #80ced6;   
+}
