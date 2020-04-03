@@ -9,9 +9,11 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
+import javafx.util.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -27,6 +29,12 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javax.crypto.NoSuchPaddingException;
 
 public class ChatWindow extends Application {
@@ -50,7 +58,9 @@ public class ChatWindow extends Application {
     private List<Label> messages;
     private ScrollPane scrollP;
 
-    private SSLConnection ssl_conn;
+    private BlockingQueue<String> message_queue;
+    private SSLConnection ssl_con;
+    private Thread recv_thread;
 
     private int messageCount;
 
@@ -63,13 +73,15 @@ public class ChatWindow extends Application {
         //String paramStr = "Named Parameters: " + namedParams + "\n" +
         //"Unnamed Parameters: " + unnamedParams + "\n" +
         //"Raw Parameters: " + rawParams;
+        message_queue = new LinkedBlockingQueue<>(10);
 
-        if (id.equals("[Client]")) {
+        if (id.equals(
+                "[Client]")) {
             cms = "Server";
             try {
                 Socket sock = new Socket("localhost", 6666);
 
-                SSLConnection ssl_con = new SSLConnection(sock);
+                ssl_con = new SSLConnection(sock);
 
                 System.out.println("Establishing Secure Connection");
                 if (ssl_con.client_handshake()) {
@@ -90,7 +102,7 @@ public class ChatWindow extends Application {
                 Socket sock = listen_soc.accept();
                 System.out.println("Received connection");
 
-                SSLConnection ssl_con = new SSLConnection(sock);
+                ssl_con = new SSLConnection(sock);
 
                 System.out.println("Establishing Secure Connection");
                 if (ssl_con.server_handshake()) {
@@ -102,6 +114,21 @@ public class ChatWindow extends Application {
                 Logger.getLogger(ChatWindow.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
+        
+         recv_thread = new Thread(() -> {
+            while (true) {
+                try {
+                    Thread.sleep(1000);
+                    Object recv = ssl_con.recvObject();
+                    if (recv != null)
+                        message_queue.put((String)recv);
+                } catch (IOException | ClassNotFoundException | InterruptedException ex) {
+                    Logger.getLogger(ChatWindow.class.getName()).log(Level.SEVERE, null, ex);
+                    break;
+                }
+            }
+        });
+        recv_thread.start();
 
         //System.out.println(paramStr);
     }
@@ -147,6 +174,13 @@ public class ChatWindow extends Application {
 
         });
 
+        // toggle the visibility of 'rect' every 500ms
+        Timeline fiveSecondsWonder = new Timeline(new KeyFrame(Duration.seconds(1), (ActionEvent event) -> {
+            downloadMessage();
+        }));
+        fiveSecondsWonder.setCycleCount(Timeline.INDEFINITE);
+        fiveSecondsWonder.play();
+
         root.getStylesheets().add(getClass().getResource("Style.css").toExternalForm());
 
         connectionMessage = new Label(("You are connected to: ".concat(cms)).concat("!"));
@@ -172,14 +206,27 @@ public class ChatWindow extends Application {
         messages.get(messageCount).setStyle("-fx-translate-x: 285;");
         chatBox.getChildren().add(messages.get(messageCount));
         messageCount++;
-        downloadMessage("test");
+        
+        try {
+            ssl_con.sendObject(lastMessageSent);
+        } catch (IOException ex) {
+            Logger.getLogger(ChatWindow.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
-    public void downloadMessage(String s) {
-        Label messagetoadd = new Label(s);
-        messages.add(messagetoadd);
-        chatBox.getChildren().add(messages.get(messageCount));
-        messageCount++;
+    public void downloadMessage() {
+
+        while (!message_queue.isEmpty()) {
+            try {
+                String s = (String)message_queue.take();
+                Label messagetoadd = new Label(s);
+                messages.add(messagetoadd);
+                chatBox.getChildren().add(messages.get(messageCount));
+                messageCount++;
+            } catch (InterruptedException ex) {
+                Logger.getLogger(ChatWindow.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
     }
 
     public File getImageFile() {
