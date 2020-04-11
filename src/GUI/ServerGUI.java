@@ -14,13 +14,7 @@ public class ServerGUI {
 
     
     public static void main(String[] args) {
-        
-        //ChatWindow test = new ChatWindow("Client");
-       
-        System.out.println("Reached Here!");
         Application.launch(ChatWindow.class, "Server" );
-        //Application.launch(ChatWindow.class, "Server" );     
-        
     }
     
 }

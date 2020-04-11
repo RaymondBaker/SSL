@@ -134,34 +134,43 @@ public class SSLConnection {
             // recv cert
             byte[] cert = (byte[]) in.readObject();
 
-            JEncrypRSA server_pub = new JEncrypRSA(CA_cipher.unsign(cert), 1024);
-            System.out.println("\tRecieved Server Public Key");
+            switch (key_exchange_alg) {
+                case RSA: {
+                    JEncrypRSA server_pub = new JEncrypRSA(CA_cipher.unsign(cert), 1024);
+                    System.out.println("\tRecieved Server Public Key");
 
-            // recv cert_request
-            int cert_req = (int) in.readObject();
-            System.out.println("\tRecieved Certificate Request: " + cert_req);
+                    // recv cert_request
+                    int cert_req = (int) in.readObject();
+                    System.out.println("\tRecieved Certificate Request: " + cert_req);
+                    // recv server_hello_done
+                    in.readObject();
+                    System.out.println("\tRecieved Server Hello Done");
 
-            // recv server_hello_done
-            in.readObject();
-            System.out.println("\tRecieved Server Hello Done");
+                    // ----Phase 3----
+                    // send cert
+                    if (cert_req == 1) {
+                        System.err.println("Not Implemented");
+                        return false;
+                    }
+                    // send client_key_exchange
+                    // TODO: check if DES is actually chosen
+                    sesh_cipher = new JEncrypDES();
 
-            // ----Phase 3----
-            // send cert
-            if (cert_req == 1) {
-                System.err.println("Not Implemented");
-                return false;
+                    out.writeObject(server_pub.encrypt(sesh_cipher.get_encrypt_key().getEncoded()));
+
+                    // send cert_verify
+                    if (cert_req == 1) {
+                        System.err.println("Not Implemented");
+                        return false;
+                    }
+                    break;
+                }
+                case DH: {
+                    System.err.println("Not Implemented");
+                    return false;
+                }
             }
-            // send client_key_exchange
-            // TODO: check if DES is actually chosen
-            sesh_cipher = new JEncrypDES();
 
-            out.writeObject(server_pub.encrypt(sesh_cipher.get_encrypt_key().getEncoded()));
-
-            // send cert_verify
-            if (cert_req == 1) {
-                System.err.println("Not Implemented");
-                return false;
-            }
             // ----Phase 4----
             // send change_cipher_spec
             out.writeObject(0);
@@ -241,8 +250,8 @@ public class SSLConnection {
                     break;
                 }
                 case DH: {
-                    // Someone elses problem
-                    break;
+                    System.err.println("DH Not Implemented");
+                    return false;
                 }
             }
 
@@ -324,7 +333,7 @@ public class SSLConnection {
         if (!handshake_complete) {
             throw new IOException("Handshake Not Complete");
         }
-
+ 
         try {
             byte[] data = (byte[]) in.readObject();
             byte[] decrypted = sesh_cipher.decrypt(data);
