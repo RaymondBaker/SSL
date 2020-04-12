@@ -157,7 +157,7 @@ public class SSLConnection {
                     sesh_cipher = new JEncrypDES();
 
                     out.writeObject(server_pub.encrypt(sesh_cipher.get_encrypt_key().getEncoded()));
-
+                    System.out.println("\tSent Session Key");
                     // send cert_verify
                     if (cert_req == 1) {
                         System.err.println("Not Implemented");
@@ -242,9 +242,9 @@ public class SSLConnection {
                     // Don't do anything because we didn't request a cert
                     byte[] recv_data = (byte[]) in.readObject();
                     byte[] key_data = rsa_transfer_cipher.decrypt(recv_data);
-
+                   
                     SecretKey sesh_key = new SecretKeySpec(key_data, 0, key_data.length, "DES");
-
+                    System.out.println("\tReceived Session Key");
                     sesh_cipher = new JEncrypDES(sesh_key);
 
                     break;
