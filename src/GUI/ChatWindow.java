@@ -3,7 +3,10 @@ package GUI;
 import Application.ClientMain;
 import Application.ServerMain;
 import Crypto.SSLConnection;
+import javafx.scene.image.Image;
+import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -35,7 +38,9 @@ import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.scene.image.ImageView;
 import javax.crypto.NoSuchPaddingException;
+import javax.imageio.ImageIO;
 
 public class ChatWindow extends Application {
 
@@ -47,7 +52,7 @@ public class ChatWindow extends Application {
     private String id;
     private String lastMessageSent;
     private Label connectionMessage;
-
+    private String picCode = ";//V$T5Jj=QbF4~;";
     private Button send;
     private Button image;
     private Button quit;
@@ -114,14 +119,22 @@ public class ChatWindow extends Application {
                 Logger.getLogger(ChatWindow.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
-        
-         recv_thread = new Thread(() -> {
+
+        recv_thread = new Thread(() -> {
             while (true) {
                 try {
                     Thread.sleep(1000);
                     Object recv = ssl_con.recvObject();
-                    if (recv != null)
-                        message_queue.put((String)recv);
+                    if (recv != null) {
+
+                        if ((((String) recv)).equals(picCode)) {
+                            String name = downloadImageFile();
+                            message_queue.put("Image Recieved: " + name);
+
+                        } else {
+                            message_queue.put((String) recv);
+                        }
+                    }
                 } catch (IOException | ClassNotFoundException | InterruptedException ex) {
                     Logger.getLogger(ChatWindow.class.getName()).log(Level.SEVERE, null, ex);
                     break;
@@ -164,6 +177,7 @@ public class ChatWindow extends Application {
 
             if (imageFile != null) {
                 System.out.println("File selected: " + imageFile.getName());
+                uploadImageFile(imageFile);
             } else {
                 System.out.println("File selection cancelled.");
             }
@@ -206,7 +220,7 @@ public class ChatWindow extends Application {
         messages.get(messageCount).setStyle("-fx-translate-x: 285;");
         chatBox.getChildren().add(messages.get(messageCount));
         messageCount++;
-        
+
         try {
             ssl_con.sendObject(lastMessageSent);
         } catch (IOException ex) {
@@ -218,7 +232,7 @@ public class ChatWindow extends Application {
 
         while (!message_queue.isEmpty()) {
             try {
-                String s = (String)message_queue.take();
+                String s = (String) message_queue.take();
                 Label messagetoadd = new Label(s);
                 messages.add(messagetoadd);
                 chatBox.getChildren().add(messages.get(messageCount));
@@ -229,8 +243,41 @@ public class ChatWindow extends Application {
         }
     }
 
-    public File getImageFile() {
-        return imageFile;
+    public void uploadImageFile(File imageF) {
+
+        Label messagetoadd = new Label("Image Sent: " + imageF.getName() );
+        messages.add(messagetoadd);
+        messages.get(messageCount).setStyle("-fx-translate-x: 285;");
+        chatBox.getChildren().add(messages.get(messageCount));
+        messageCount++;
+
+        
+        try {
+            ssl_con.sendObject(picCode);
+            ssl_con.sendObject(imageF);
+        } catch (IOException ex) {
+            Logger.getLogger(ChatWindow.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+    }
+
+    public String downloadImageFile() {
+        String name = "";
+        try {
+            File recv = (File) ssl_con.recvObject();
+            name = recv.getName();
+            BufferedImage bImage;
+
+            System.out.println(name);
+            bImage = ImageIO.read(recv);
+            String parts[] = name.split("\\.");
+            String dir = id + "RecvPics\\" + name;
+            ImageIO.write(bImage, parts[parts.length - 1], new File(dir));            
+
+        } catch (IOException | ClassNotFoundException ex) {
+            Logger.getLogger(ChatWindow.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return name;
     }
 
     public String getTextBoxContent() {
