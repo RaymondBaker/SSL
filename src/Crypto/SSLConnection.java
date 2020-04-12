@@ -177,13 +177,13 @@ public class SSLConnection {
             System.out.println("\tSent Change Cipher Spec");
             // send finished
             out.writeObject(1);
-            System.out.println("\tSent Finnished");
+            System.out.println("\tSent Finished");
             // recv change_cipher_spec
             in.readObject();
             System.out.println("\tReceived Change Cipher Spec");
             // recv finished
             in.readObject();
-            System.out.println("\tReceived Finnished");
+            System.out.println("\tReceived Finished");
 
             handshake_complete = true;
             return true;
@@ -267,7 +267,7 @@ public class SSLConnection {
             System.out.println("\tSent Change Cipher Spec");
             // send finished
             out.writeObject(1);
-            System.out.println("\tSent Finnished");
+            System.out.println("\tSent Finished");
 
             handshake_complete = true;
             return true;
